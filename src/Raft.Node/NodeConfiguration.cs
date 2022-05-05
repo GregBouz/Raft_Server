@@ -6,8 +6,8 @@ using System.Threading.Tasks;
 
 namespace Raft.Node
 {
-    public class RoleCall
+    public class NodeConfiguration
     {
-        public List<Constituent> Members { get; set; }
+        public Dictionary<string, Constituent> Constituents { get; set; }
     }
 }

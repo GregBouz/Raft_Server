@@ -9,5 +9,7 @@ namespace Raft.Node
     public class Constituent
     {
         public string Address { get; set; }
+
+        public LogEntry LastEntry { get; set; }
     }
 }
