@@ -3,15 +3,15 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.1.32120.378
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raft_Server", "Raft_Server.csproj", "{9FA14F30-3694-461F-AF83-BBA1F8EC2713}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raft_Server", "src\Raft_Server\Raft_Server.csproj", "{9FA14F30-3694-461F-AF83-BBA1F8EC2713}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raft.Node", "..\Raft.Node\Raft.Node.csproj", "{36FCED33-6F96-4282-AE3A-206689F5627F}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raft.Node", "src\Raft.Node\Raft.Node.csproj", "{36FCED33-6F96-4282-AE3A-206689F5627F}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{9959FC76-DF95-484B-8A93-226A668C9693}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{903EAAB4-BF2E-48F5-8663-8EE62F25DFFA}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raft.UnitTest", "..\Raft.UnitTest\Raft.UnitTest.csproj", "{8A822E85-D169-4EC3-BBDF-83EF02306041}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raft.UnitTest", "test\Raft.UnitTest\Raft.UnitTest.csproj", "{8A822E85-D169-4EC3-BBDF-83EF02306041}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
