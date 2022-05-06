@@ -1,6 +1,6 @@
 ﻿namespace Raft.Node
 {
-    public class AppendMessageRequest
+    public class AppendEntiresRequest
     {
         public int Term { get; set; }
 

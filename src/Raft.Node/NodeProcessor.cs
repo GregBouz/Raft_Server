@@ -59,13 +59,13 @@ namespace Raft.Node
             _electionTimer = new Timer(HandleElectionTimeout, null, _electionTimeoutInMilliSeconds, Timeout.Infinite);
         }
 
-        public void AppendMessageReceived(string sender, AppendMessageRequest request)
+        public void AppendEntriesReceived(string sender, AppendEntiresRequest request)
         {
             _outboundEventService.SendAppendConfirmation(sender, 
-                new AppendMessageConfirmationRequest() { Term = _currentTerm.TermIndex, Message = request.Message });
+                new AppendEntriesResponse() { Term = _currentTerm.TermIndex, Message = request.Message });
         }
 
-        public void AppendMessageConfirmationReceived(string sender, AppendMessageConfirmationRequest request)
+        public void AppendMessageConfirmationReceived(string sender, AppendEntriesResponse request)
         {
             _messageLog.AddLogEntry(request.Term, request.Message);
         }
@@ -97,7 +97,7 @@ namespace Raft.Node
             }
         }
 
-        public void VoteRequestReceived(string sender, VoteRequest request)
+        public void VoteRequestReceived(string sender, RequestVotesRequest request)
         {
             if (request?.Index)
             {

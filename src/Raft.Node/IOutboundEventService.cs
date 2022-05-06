@@ -8,7 +8,7 @@ namespace Raft.Node
 {
     public interface IOutboundEventService
     {
-        public void SendAppendEntries(string address, AppendMessageRequest request);
+        public void SendAppendEntries(string address, AppendEntiresRequest request);
 
         public void SendVoteRequest(string address);
     }
