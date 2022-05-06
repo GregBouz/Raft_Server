@@ -1,19 +1,18 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Raft.Node
+﻿namespace Raft.Node
 {
     public class MessageLog
     {
-        private Dictionary<int, LogEntry> _logEntries;
+        private readonly Dictionary<int, LogEntry> _logEntries;
 
-        public void AddLogEntry(int term, string message)
+        public MessageLog()
         {
-            if (!_logEntries.ContainsKey(term))
-                _logEntries.Add(term, new LogEntry() { Term = term, Message = message});
+            _logEntries = new Dictionary<int, LogEntry>();
+        }
+
+        public void AddLogEntry(int term, int index, string command)
+        {
+            if (!_logEntries.ContainsKey(index))
+                _logEntries.Add(index, new LogEntry() { Command = command, Index = index, Term = term });
         }
     }
 }

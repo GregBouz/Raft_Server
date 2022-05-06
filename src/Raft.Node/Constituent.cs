@@ -10,6 +10,6 @@ namespace Raft.Node
     {
         public string Address { get; set; }
 
-        public LogEntry LastEntry { get; set; }
+        public LogEntry NextIndex { get; set; }
     }
 }

@@ -3,6 +3,10 @@ using System.Net.Sockets;
 
 namespace Raft.Node
 {
+    // Delegates
+    public delegate void SendVoteRequest();
+    public delegate void SendAppendEntries();
+
     /// <summary>
     /// TODO:
     /// Add functions for handling recieved events (heartbeat, voterequest, appendMessage)
@@ -19,9 +23,13 @@ namespace Raft.Node
         private DateTimeOffset _lastElection;
 
         private TcpListener _requestListener;
+        private Dictionary<int, bool> _votesReceived;
 
         private MessageLog _messageLog;
-        private int _currentTerm = 0;
+        private Term _currentTerm;
+
+        public event SendVoteRequest OnVoteRequest;
+        public event SendAppendEntries OnAppendEntries;
 
         public Role Role { get; private set; }
         public ElectionRequest? _electionRequest;
@@ -39,6 +47,8 @@ namespace Raft.Node
             _messageLog = new MessageLog();
             _outboundEventService = outboundEventService;
             _nodeConfiguration = nodeConfiguration;
+            _votesReceived = new Dictionary<int, bool>();
+            _currentTerm = new Term() { TermIndex = 0 };
 
             //ProcessLoop();
         }
@@ -49,24 +59,51 @@ namespace Raft.Node
             _electionTimer = new Timer(HandleElectionTimeout, null, _electionTimeoutInMilliSeconds, Timeout.Infinite);
         }
 
-        public void AppendMessageRequest(AppendMessageRequest request)
+        public void AppendMessageReceived(string sender, AppendMessageRequest request)
         {
-
+            _outboundEventService.SendAppendConfirmation(sender, 
+                new AppendMessageConfirmationRequest() { Term = _currentTerm.TermIndex, Message = request.Message });
         }
 
-        public void AppendMessageConfirm(AppendMessageConfirmationRequest request)
+        public void AppendMessageConfirmationReceived(string sender, AppendMessageConfirmationRequest request)
         {
-
+            _messageLog.AddLogEntry(request.Term, request.Message);
         }
 
+        /// <summary>
+        /// If a heartbeat is received the election timeout needs to be reset.
+        /// </summary>
         public void HeartBeatRecieved()
         {
             _electionTimer.Change(_electionTimeoutInMilliSeconds, Timeout.Infinite);
         }
 
-        public void VoteRecieved(object? state)
+        /// <summary>
+        /// If a vote is received update the votes received list until a majority is counted
+        /// </summary>
+        /// <param name="state"></param>
+        public void VoteReceived(string sender)
         {
+            _currentTerm.VotesReceived.Add(sender);
+            if (_currentTerm.VotesReceived.Count > (_nodeConfiguration.Constituents.Count / 2))
+            {
+                Role = Role.Leader;
+                foreach (var constituent in _nodeConfiguration.Constituents)
+                {
+                    OnAppendEntries.Invoke();
+                    //_outboundEventService.SendAppend(constituent.Value.Address, 
+                    //    new AppendMessageRequest() { Term = _currentTerm.TermIndex, Message = "" });
+                }
+            }
+        }
 
+        public void VoteRequestReceived(string sender, VoteRequest request)
+        {
+            if (request?.Index)
+            {
+                _currentTerm.Voted = true;
+                _outboundEventService.SendElectionResponse(sender);
+            }
         }
 
         private void HandleElectionTimeout(object? state)
@@ -74,7 +111,8 @@ namespace Raft.Node
             Role = Role.Candidate;
             foreach (Constituent constituent in _nodeConfiguration.Constituents.Values)
             {
-                _outboundEventService.SendElection(constituent.Address);
+                OnVoteRequest.Invoke();
+                //_outboundEventService.SendElection(constituent.Address);
             }
         }
 
