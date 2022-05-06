@@ -8,7 +8,7 @@ namespace Raft.Node
 {
     public class Term
     {
-        public int TermIndex { get; set; }
+        public int Index { get; set; }
         public List<string> VotesReceived { get; set; }
         public bool Voted { get; set; }
     }

@@ -6,7 +6,9 @@ using System.Threading.Tasks;
 
 namespace Raft.Node.Models
 {
-    internal class RequestVotesResponse
+    public class RequestVotesResponse
     {
+        public int CurrentTerm { get; set; }
+        public bool Vote { get; set; }
     }
 }
