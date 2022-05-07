@@ -46,7 +46,7 @@ namespace Raft.Node
         public void Start()
         {
             Role = Role.Follower;
-            _heartbeatTimer = new Timer(HandleHeartbeatTimeout, null, Timeout.Infinite, Timeout.Infinite);
+            _heartbeatTimer = new Timer(HandleHeartbeatTimeout, null, _heartbeatTimeoutInMilliSeconds, Timeout.Infinite);
         }
         
         public void Stop()
@@ -105,7 +105,7 @@ namespace Raft.Node
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="request"></param>
-        public RequestVotesResponse RequestVotesReceived(string sender, RequestVotesRequest request)
+        public RequestVotesResponse RequestVoteReceived(string sender, RequestVotesRequest request)
         {
             ResetElectionTimeout();
             var voteResponse = false;
@@ -113,6 +113,12 @@ namespace Raft.Node
             {
                 _hasVoted = true;
                 voteResponse = true;
+            }
+
+            // Always reset current term if a request is received with a higher term
+            if (request.Term > CurrentTerm)
+            {
+                CurrentTerm = request.Term;
             }
             return new RequestVotesResponse() { Vote = voteResponse, CurrentTerm = CurrentTerm };
         }
@@ -130,23 +136,23 @@ namespace Raft.Node
             // Even after stopping the timer and disposing of it this handler can still fire
             if (_heartbeatTimer == null)
                 return;
-            // Reset timer
-            _heartbeatTimer.Change(0, Timeout.Infinite);
 
             if (Role == Role.Follower)
             {
                 Role = Role.Candidate;
                 StartElection();
             }
-            if (Role == Role.Candidate)
+            else if (Role == Role.Candidate)
             {
                 // If the timeout elapses as a candidate then start a new term and restart the election process
                 StartElection();
             }
-            if (Role == Role.Leader)
+            else if (Role == Role.Leader)
             {
 
             }
+            // Reset timer
+            ResetElectionTimeout();
         }
 
         /// <summary>
@@ -154,11 +160,12 @@ namespace Raft.Node
         /// </summary>
         private void ResetElectionTimeout()
         {
-            _heartbeatTimer.Change(0, Timeout.Infinite);
+            _heartbeatTimer.Change(_heartbeatTimeoutInMilliSeconds, Timeout.Infinite);
         }
 
         private void StartElection()
         {
+            Console.WriteLine("Starting Election");
             CurrentTerm++;
             VotesReceived = 1;
             foreach (Constituent constituent in _nodeConfiguration.Constituents.Values)
@@ -174,7 +181,7 @@ namespace Raft.Node
                 List<LogEntry> logEntriesToSend = new List<LogEntry>();
                 if (!heartbeatOnly)
                 {
-
+                    // TODO: send log entries to constituents last log index
                 }
                 OnAppendEntries.Invoke(ServerAddress, constituent.Address, CurrentTerm, -1, logEntriesToSend, _messageLog.LastLogTerm(), _messageLog.LastLogTerm());
             }

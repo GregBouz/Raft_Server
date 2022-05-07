@@ -12,12 +12,15 @@ namespace Raft.UnitTest
 {
     /// <summary>
     /// A follower should:
-    /// 1) Respond to AppendEntries
-    /// 1a) Respond to AppendEntries with last log index that is behind
-    /// 2) Respond to RequestVotes
-    /// 3) Convert to Candidate on ElectionTimeout
-    /// 4) Send fail responses if term in request is lower than current term
-    /// 5) Set term to leaders term appendEntries is received
+    /// 1) Respond to AppendEntries with success
+    /// 1a) Respond to AppendEntries when request last log index is stale
+    /// 1b) Response to AppendEntries when request term is stale
+    /// 2) Respond to RequestVotes (RespondToRequestVotesTest) 
+    /// 2a) Send fail response if term in request is lower than current term (RespondToRequestVotesFailedOlderTermTest)
+    /// 2b) Send fail response if last log index in request is lower than servers (RespondToRequestVotesFailedOlderMessageLogTest)
+    /// 2c) Send fail response if server has already voted in term (RespondToRequestVotesFailedAlreadyVotedTest)
+    /// 3) Convert to Candidate on ElectionTimeout (HeartbeatTimeoutTest)
+    /// 4) Set term to leaders term appendEntries is received (UpdateStaleTermToRequestTermTest)
     /// </summary>
     public class FollowerTests
     {
@@ -25,7 +28,7 @@ namespace Raft.UnitTest
         /// Tests that when the heartbeat timeout elapses that the follower becomes a candidate.
         /// </summary>
         [Fact]
-        public async void HeartbeatTimoutTest()
+        public async void HeartbeatTimeoutTest()
         {
             AutoResetEvent _autoResetEvent = new AutoResetEvent(false);
 
@@ -62,12 +65,9 @@ namespace Raft.UnitTest
 
             // When the node is started and the heartbeat timeout elapses
             node.Start();
-            Thread.Sleep(300);
-            node.Stop();
-
             // Then the election timeout should raise an OnVoteRequest event
-            _autoResetEvent.WaitOne().Should().BeTrue();
-
+            _autoResetEvent.WaitOne();
+            node.Stop();
             // Then the server should vote true
             node.CurrentTerm.Should().Be(1);
             _actualTerm.Should().Be(1);
@@ -100,12 +100,12 @@ namespace Raft.UnitTest
 
             // When the node is started and a vote request is made
             node.Start();
-            var response = node.RequestVotesReceived("test-address-1", new RequestVotesRequest() { Term = 1, LastLogIndex = 0, LastLogTerm = 0 });
+            var response = node.RequestVoteReceived("test-address-1", new RequestVotesRequest() { Term = 1, LastLogIndex = 0, LastLogTerm = 0 });
             node.Stop();
 
             // Then the server should vote true
             response.Vote.Should().BeTrue();
-            response.CurrentTerm.Should().Be(0);
+            response.CurrentTerm.Should().Be(1);
         }
 
         /// <summary>
@@ -133,7 +133,7 @@ namespace Raft.UnitTest
 
             // When the node is started and a vote request is made
             node.Start();
-            var response = node.RequestVotesReceived("test-address-1", new RequestVotesRequest() { Term = 1, LastLogIndex = 0, LastLogTerm = 0 });
+            var response = node.RequestVoteReceived("test-address-1", new RequestVotesRequest() { Term = 1, LastLogIndex = 0, LastLogTerm = 0 });
             node.Stop();
 
             // Then the server should vote true
@@ -172,7 +172,7 @@ namespace Raft.UnitTest
 
             // When the node is started and a vote request is made
             node.Start();
-            var response = node.RequestVotesReceived("test-address-1", new RequestVotesRequest() { Term = 3, LastLogIndex = 3, LastLogTerm = 2 });
+            var response = node.RequestVoteReceived("test-address-1", new RequestVotesRequest() { Term = 3, LastLogIndex = 3, LastLogTerm = 2 });
             node.Stop();
 
             // Then the server should vote true
@@ -209,13 +209,49 @@ namespace Raft.UnitTest
 
             // When the node is started and a successful vote request is made followed by another vote request
             node.Start();
-            var response = node.RequestVotesReceived("test-address-1", new RequestVotesRequest() { Term = 1, LastLogIndex = 0, LastLogTerm = 0 });
-            var secondResponse = node.RequestVotesReceived("test-address-2", new RequestVotesRequest() { Term = 1, LastLogIndex = 0, LastLogTerm = 0 });
+            var response = node.RequestVoteReceived("test-address-1", new RequestVotesRequest() { Term = 1, LastLogIndex = 0, LastLogTerm = 0 });
+            var secondResponse = node.RequestVoteReceived("test-address-2", new RequestVotesRequest() { Term = 1, LastLogIndex = 0, LastLogTerm = 0 });
             node.Stop();
 
             // Then the server should vote true
             response.Vote.Should().BeTrue();
             secondResponse.Vote.Should().BeFalse();
+        }
+
+        /// <summary>
+        /// Tests that a fail response is sent if a candidate requests a vote to a node that has already voted
+        /// </summary>
+        [Fact]
+        public async void UpdateStaleTermToRequestTermTest()
+        {
+            // Given a node configuration of 1 constituent
+            var nodeConfiguration = new NodeConfiguration()
+            {
+                Constituents = new Dictionary<string, Constituent>()
+                {
+                    { "test-address-1", new Constituent()
+                        {
+                            Address = "test-address-1"
+                        }
+                    },
+                    { "test-address-2", new Constituent()
+                        {
+                            Address = "test-address-2"
+                        }
+                    }
+                }
+            };
+
+            // Given a raft node
+            var node = new NodeProcessor("test-address-0", nodeConfiguration);
+
+            // When the node is started and a successful vote request is made followed by another vote request
+            node.Start();
+            var response = node.RequestVoteReceived("test-address-1", new RequestVotesRequest() { Term = 3, LastLogIndex = 0, LastLogTerm = 0 });
+            node.Stop();
+
+            // Then the server should vote true
+            node.CurrentTerm.Should().Be(3);
         }
     }
 }
