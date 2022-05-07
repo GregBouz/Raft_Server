@@ -26,7 +26,7 @@
 
         public void AddLogEntry(int term, int index, string command)
         {
-            if (_logEntries.Count() >= index)
+            if (_logEntries.Count() + 1 <= index)
                 _logEntries.Add(new LogEntry() { Command = command, Index = index, Term = term });
         }
     }

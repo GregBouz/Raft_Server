@@ -4,8 +4,8 @@ using System.Net.Sockets;
 namespace Raft.Node
 {
     // Delegates
-    public delegate void SendVoteRequest(string serverAddress, int term, int lastLogTerm, int lastLogIndex);
-    public delegate void SendAppendEntries();
+    public delegate void SendVoteRequest(string sender, string receiverAddress, int term, int lastLogTerm, int lastLogIndex);
+    public delegate void SendAppendEntries(string sender, string receiverAddress, int term, int index, List<LogEntry> logEntries, int lastLogTerm, int lastLogIndex);
 
     /// <summary>
     /// TODO:
@@ -15,14 +15,9 @@ namespace Raft.Node
     { 
         private NodeConfiguration _nodeConfiguration;
 
-        private Timer _electionTimer;
         private Timer _heartbeatTimer;
-        private int _electionTimeoutInMilliSeconds = new Random().Next(150, 300);
         private int _heartbeatTimeoutInMilliSeconds = new Random().Next(150, 300);
-        private DateTimeOffset _lastElection;
-
-        private TcpListener _requestListener;
-
+        
         private MessageLog _messageLog;
 
         private bool _hasVoted = false;
@@ -31,25 +26,34 @@ namespace Raft.Node
         public event SendAppendEntries OnAppendEntries;
 
         public Role Role { get; private set; }
-        public int CurrentTermIndex { get; private set; }
+        public int CurrentTerm { get; private set; }
         public int VotesReceived { get; private set; }
+        public string ServerAddress { get; private set; }
 
         /// <summary>
         /// Initialize the node
         /// </summary>
-        public NodeProcessor(int serverNode, NodeConfiguration nodeConfiguration)
+        public NodeProcessor(string serverAddress, NodeConfiguration nodeConfiguration, TestingPresets testingPresets = null)
         {
-            CurrentTermIndex = 0;
+            ServerAddress = serverAddress;
+            CurrentTerm = testingPresets?.CurrentTerm != null ? testingPresets.CurrentTerm : 0;
             VotesReceived = 0;
 
-            _messageLog = new MessageLog();
+            _messageLog = testingPresets?.MessageLog != null ? testingPresets.MessageLog : new MessageLog();
             _nodeConfiguration = nodeConfiguration;
         }
 
         public void Start()
         {
             Role = Role.Follower;
-            _electionTimer = new Timer(HandleElectionTimeout, null, _electionTimeoutInMilliSeconds, Timeout.Infinite);
+            _heartbeatTimer = new Timer(HandleHeartbeatTimeout, null, Timeout.Infinite, Timeout.Infinite);
+        }
+        
+        public void Stop()
+        {
+            _heartbeatTimer.Change(Timeout.Infinite, Timeout.Infinite);
+            _heartbeatTimer.Dispose();
+            _heartbeatTimer = null;
         }
 
         public AppendEntriesResponse AppendEntriesReceived(string sender, AppendEntriesRequest request)
@@ -74,18 +78,22 @@ namespace Raft.Node
         /// If a vote is received update the votes received list until a majority is counted
         /// </summary>
         /// <param name="state"></param>
-        public void RequestVotesResponseReceived(string sender)
+        public void RequestVotesResponseReceived(string sender, bool voteGranted, int term)
         {
-            VotesReceived++;
-            if (VotesReceived > (_nodeConfiguration.Constituents.Count / 2))
+            // If no longer leader then ignore the received vote
+            if (Role == Role.Leader && voteGranted)
             {
-                Role = Role.Leader;
-                foreach (var constituent in _nodeConfiguration.Constituents)
+                VotesReceived++;
+                if (VotesReceived > ((_nodeConfiguration.Constituents.Count + 1) / 2))
                 {
-                    OnAppendEntries.Invoke();
-                    //_outboundEventService.SendAppend(constituent.Value.Address, 
-                    //    new AppendMessageRequest() { Term = _currentTerm.TermIndex, Message = "" });
+                    Role = Role.Leader;
+                    IssueAppendEntries(true);
                 }
+            }
+            else if (term > CurrentTerm)
+            {
+                Role = Role.Follower;
+                CurrentTerm = term;
             }
         }
 
@@ -97,13 +105,16 @@ namespace Raft.Node
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="request"></param>
-        public void RequestVotes(string sender, RequestVotesRequest request)
+        public RequestVotesResponse RequestVotesReceived(string sender, RequestVotesRequest request)
         {
-            //if ((request.Term < _currentTermIndex) || _hasVoted || )
-            //{
-            //    _currentTerm.Voted = true;
-            //    _outboundEventService.SendElectionResponse(sender);
-            //}
+            ResetElectionTimeout();
+            var voteResponse = false;
+            if ((request.Term >= CurrentTerm) && !_hasVoted && IsMoreComplete(request.LastLogTerm, request.LastLogIndex))
+            {
+                _hasVoted = true;
+                voteResponse = true;
+            }
+            return new RequestVotesResponse() { Vote = voteResponse, CurrentTerm = CurrentTerm };
         }
 
         /// <summary>
@@ -114,15 +125,58 @@ namespace Raft.Node
         /// 4) voteRequests are made to all other servers
         /// </summary>
         /// <param name="state"></param>
-        private void HandleElectionTimeout(object? state)
+        private void HandleHeartbeatTimeout(object? state)
         {
-            Role = Role.Candidate;
-            CurrentTermIndex++;
+            // Even after stopping the timer and disposing of it this handler can still fire
+            if (_heartbeatTimer == null)
+                return;
+            // Reset timer
+            _heartbeatTimer.Change(0, Timeout.Infinite);
+
+            if (Role == Role.Follower)
+            {
+                Role = Role.Candidate;
+                StartElection();
+            }
+            if (Role == Role.Candidate)
+            {
+                // If the timeout elapses as a candidate then start a new term and restart the election process
+                StartElection();
+            }
+            if (Role == Role.Leader)
+            {
+
+            }
+        }
+
+        /// <summary>
+        /// Resets the election timeout when a message from a candidate or a leader is received
+        /// </summary>
+        private void ResetElectionTimeout()
+        {
+            _heartbeatTimer.Change(0, Timeout.Infinite);
+        }
+
+        private void StartElection()
+        {
+            CurrentTerm++;
             VotesReceived = 1;
             foreach (Constituent constituent in _nodeConfiguration.Constituents.Values)
             {
-                OnVoteRequest.Invoke(constituent.Address, CurrentTermIndex, _messageLog.LastLogTerm(), _messageLog.LastLogIndex());
-                //_outboundEventService.SendElection(constituent.Address);
+                OnVoteRequest.Invoke(ServerAddress, constituent.Address, CurrentTerm, _messageLog.LastLogTerm(), _messageLog.LastLogIndex());
+            }
+        }
+
+        private void IssueAppendEntries(bool heartbeatOnly)
+        {
+            foreach (Constituent constituent in _nodeConfiguration.Constituents.Values)
+            {
+                List<LogEntry> logEntriesToSend = new List<LogEntry>();
+                if (!heartbeatOnly)
+                {
+
+                }
+                OnAppendEntries.Invoke(ServerAddress, constituent.Address, CurrentTerm, -1, logEntriesToSend, _messageLog.LastLogTerm(), _messageLog.LastLogTerm());
             }
         }
 
@@ -133,36 +187,11 @@ namespace Raft.Node
         /// <returns></returns>
         private bool IsMoreComplete(int lastLogTerm, int lastLogIndex)
         {
-            if ((lastLogTerm > _messageLog.LastLogTerm()) || (lastLogTerm == _messageLog.LastLogTerm() && lastLogIndex > _messageLog.LastLogIndex()))
+            if ((lastLogTerm > _messageLog.LastLogTerm()) || (lastLogTerm == _messageLog.LastLogTerm() && lastLogIndex >= _messageLog.LastLogIndex()))
             {
                 return true;
             }
             return false;
         }
-
-        /// <summary>
-        /// The main process loop to continually check for the following conditions:
-        /// 1) Has the election timeout elapsed?
-        /// 2) If so call for an election
-        /// 3) Otherwise handle any requests from the current leader
-        /// </summary>
-        //private void ProcessLoop()
-        //{
-        //    while (true)
-        //    {
-        //        HandleRequests();
-        //        if (_role == Role.Leader)
-        //        {
-
-        //        }
-        //        // Check if election timeout has elapsed as either Candidate or Follower
-        //        else if (DateTimeOffset.UtcNow > _lastElection.AddMilliseconds(_electionTimeoutInMilliSeconds))
-        //        {
-        //            _role = Role.Candidate;
-        //            _lastElection = DateTimeOffset.UtcNow;
-        //            CallForElection();
-        //        }
-        //    }
-        //}
     }
 }

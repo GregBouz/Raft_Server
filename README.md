@@ -21,4 +21,12 @@
 - A leader sends out `AppendEntries` messages when a write-request is received from the client.
 - If the `HeartbeatTimeout` elapses prior to a client message being received an empty `AppendEntries` message will be sent to all nodes.
 
-## 
+## Safety Principles
+
+In the raft protocol safety is ensured by the following principles:
+
+- There can only be one leader during a term. 
+- A leader can never overwrite or delete log entries only append.
+- If two logs contain an entry with the same index and term then the logs are identical in all entries.
+- When a log entry is committed in a current term it will always be present in all future terms.
+- If a node applies a log entry at a given index no other server will ever apply a different log entry for the same index.
