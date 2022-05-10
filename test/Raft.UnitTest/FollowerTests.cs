@@ -1,11 +1,7 @@
 ﻿using FluentAssertions;
 using Raft.Node;
-using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 using Xunit;
 
 namespace Raft.UnitTest
@@ -77,7 +73,6 @@ namespace Raft.UnitTest
 
         /// <summary>
         /// Tests that a success response is sent if a candidate requests a vote and has a log at least as complete as the servers
-        /// servers term.
         /// </summary>
         [Fact]
         public async void RespondToRequestVotesTest()
@@ -219,7 +214,7 @@ namespace Raft.UnitTest
         }
 
         /// <summary>
-        /// Tests that a fail response is sent if a candidate requests a vote to a node that has already voted
+        /// Tests that a the server updates its stale currentTerm when a vote request contains a newer term
         /// </summary>
         [Fact]
         public async void UpdateStaleTermToRequestTermTest()
@@ -252,6 +247,171 @@ namespace Raft.UnitTest
 
             // Then the server should vote true
             node.CurrentTerm.Should().Be(3);
+        }
+
+        /// <summary>
+        /// Tests that a success response is sent if an appendEntries request is made and the server is up-to-date
+        /// </summary>
+        [Fact]
+        public async void RespondToAppendEntriesSuccessTest()
+        {
+            // Given a node configuration of 1 constituent
+            var nodeConfiguration = new NodeConfiguration()
+            {
+                Constituents = new Dictionary<string, Constituent>()
+                {
+                    { "test-address-1", new Constituent()
+                        {
+                            Address = "test-address-1"
+                        }
+                    }
+                }
+            };
+
+            // Given a preset message log
+            var messageLog = new MessageLog();
+            messageLog.AddLogEntry(1, 1, "1-1-test");
+            messageLog.AddLogEntry(1, 2, "1-2-test");
+            messageLog.AddLogEntry(2, 3, "2-3-test");
+            messageLog.AddLogEntry(3, 4, "3-4-test");
+
+            // Given a raft node
+            var node = new NodeProcessor("test-address-0", nodeConfiguration, new TestingPresets() { CurrentTerm = 3, MessageLog = messageLog });
+
+            // When the node is started and a vote request is made
+            node.Start(false);
+            var response = node.AppendEntriesReceived("test-address-1", new AppendEntriesRequest()
+            {
+                Term = 4,
+                LeaderIndex = 1,
+                prevLogIndex = 4,
+                prevLogTerm = 3,
+                LeaderCommit = 5,
+                LogEntries =
+                new LogEntry[]
+                {
+                    new LogEntry()
+                    {
+                        Term = 4,
+                        Index = 5,
+                        Command = "test-message-5"
+                    }
+                }
+            });
+
+            response.Success.Should().BeTrue();
+        }
+
+        /// <summary>
+        /// Tests that a failed response is sent if an appendEntries request is made and request term is lower than the servers
+        /// </summary>
+        [Fact]
+        public async void RespondToAppendEntriesFailTermIsLowerTest()
+        {
+            // Given a node configuration of 1 constituent
+            var nodeConfiguration = new NodeConfiguration()
+            {
+                Constituents = new Dictionary<string, Constituent>()
+                {
+                    { "test-address-1", new Constituent()
+                        {
+                            Address = "test-address-1"
+                        }
+                    }
+                }
+            };
+
+            // Given a preset message log
+            var messageLog = new MessageLog();
+            messageLog.AddLogEntry(1, 1, "1-1-test");
+            messageLog.AddLogEntry(1, 2, "1-2-test");
+            messageLog.AddLogEntry(2, 3, "2-3-test");
+            messageLog.AddLogEntry(3, 4, "3-4-test");
+
+            // Given a raft node
+            var node = new NodeProcessor("test-address-0", nodeConfiguration, new TestingPresets() { CurrentTerm = 3, MessageLog = messageLog });
+
+            // When the node is started and a vote request is made
+            node.Start(false);
+            var response = node.AppendEntriesReceived("test-address-1", new AppendEntriesRequest()
+            {
+                Term = 4,
+                LeaderIndex = 1,
+                prevLogIndex = 4,
+                prevLogTerm = 2,
+                LeaderCommit = 4,
+                LogEntries =
+                new LogEntry[]
+                {
+                    new LogEntry()
+                    {
+                        Term = 4,
+                        Index = 5,
+                        Command = "test-message-5"
+                    }
+                }
+            });
+
+            response.Success.Should().BeFalse();
+        }
+
+        /// <summary>
+        /// Tests that a failed response is sent if an appendEntries request is made but the existing index has a mismatched term
+        /// </summary>
+        [Fact]
+        public async void RespondToAppendEntriesFailMismatchedTermTest()
+        {
+            // Given a node configuration of 1 constituent
+            var nodeConfiguration = new NodeConfiguration()
+            {
+                Constituents = new Dictionary<string, Constituent>()
+                {
+                    { "test-address-1", new Constituent()
+                        {
+                            Address = "test-address-1"
+                        }
+                    }
+                }
+            };
+
+            // Given a preset message log
+            var messageLog = new MessageLog();
+            messageLog.AddLogEntry(1, 1, "1-1-test");
+            messageLog.AddLogEntry(1, 2, "1-2-test");
+            messageLog.AddLogEntry(2, 3, "2-3-test");
+            messageLog.AddLogEntry(3, 4, "3-4-test");
+
+            // Given a raft node
+            var node = new NodeProcessor("test-address-0", nodeConfiguration, new TestingPresets() { CurrentTerm = 3, MessageLog = messageLog });
+
+            // When the node is started and a vote request is made
+            node.Start(false);
+            var response = node.AppendEntriesReceived("test-address-1", new AppendEntriesRequest()
+            {
+                Term = 4,
+                LeaderIndex = 1,
+                prevLogIndex = 4,
+                prevLogTerm = 5,
+                LeaderCommit = 5,
+                LogEntries =
+                new LogEntry[]
+                {                    
+                    new LogEntry()
+                    {
+                        Term = 3,
+                        Index = 4,
+                        Command = "3-4-test"
+                    },
+                    new LogEntry()
+                    {
+                        Term = 4,
+                        Index = 5,
+                        Command = "4-5-test"
+                    }
+                }
+            });
+
+            response.Success.Should().BeFalse();
         }
     }
 }

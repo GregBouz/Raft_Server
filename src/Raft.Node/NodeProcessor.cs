@@ -43,10 +43,17 @@ namespace Raft.Node
             _nodeConfiguration = nodeConfiguration;
         }
 
-        public void Start()
+        /// <summary>
+        /// Starts the server processing from the follower state.
+        /// </summary>
+        /// <param name="enableTimers">Used to disable the timer for testing purposes.</param>
+        public void Start(bool enableTimers = true)
         {
             Role = Role.Follower;
-            _heartbeatTimer = new Timer(HandleHeartbeatTimeout, null, _heartbeatTimeoutInMilliSeconds, Timeout.Infinite);
+            if (enableTimers)
+            {
+                _heartbeatTimer = new Timer(HandleHeartbeatTimeout, null, _heartbeatTimeoutInMilliSeconds, Timeout.Infinite);
+            }
         }
         
         public void Stop()
@@ -56,17 +63,49 @@ namespace Raft.Node
             _heartbeatTimer = null;
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="request"></param>
+        /// <returns></returns>
         public AppendEntriesResponse AppendEntriesReceived(string sender, AppendEntriesRequest request)
         {
+            var response = new AppendEntriesResponse();
+
             // Check for log completeness from the appendEntries request
-            if ((request.Term > _messageLog.LastLogTerm()) || 
-                ((request.Term >= _messageLog.LastLogTerm()) && (request.Index > _messageLog.LastLogIndex())))
+            if (request.Term < CurrentTerm)
             {
-                // Append message to log and respond
-                _messageLog.AddLogEntry(request.Term, request.Index, request.Message);
-                return new AppendEntriesResponse();
+                response.Success = false;
+                response.Term = CurrentTerm;
             }
-            return null;
+            else if (request.prevLogIndex == _messageLog.LastLogIndex())
+            {
+                var lastLogEntry = _messageLog.LastLogEntry();
+                if (request.prevLogTerm == lastLogEntry.Term)
+                {
+                    var newEntry = request.LogEntries.FirstOrDefault(e => e.Index == request.LeaderCommit);
+                    if (newEntry != null)
+                    {
+                        _messageLog.AddLogEntry(request.Term, request.LeaderCommit, newEntry.Command);
+                        response.Success = true;
+                    }
+                    else
+                    {
+                        response.Success = false;
+                    }
+                }
+                // If the entries don't match delete the entry and all that follow it
+                else
+                {
+                    response.Success = false;
+                }
+            }
+            if (request.LeaderCommit > _messageLog.CommitIndex)
+            {
+                _messageLog.CommitIndex = Math.Min(request.LeaderCommit, _messageLog.LastLogIndex());
+            }
+            return response;
         }
 
         public void AppendEntriesResponseReceived(string sender, AppendEntriesResponse request)

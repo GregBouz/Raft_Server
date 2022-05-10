@@ -2,8 +2,11 @@
 {
     public class AppendEntriesRequest
     {
-        public int Index { get; set; }
+        public int LeaderCommit { get; set; }
+        public int LeaderIndex { get; set; }
+        public int prevLogIndex { get; set; }
+        public int prevLogTerm { get; set; }
         public int Term { get; set; }
-        public string Message { get; set; }
+        public LogEntry[] LogEntries { get; set; }
     }
 }
