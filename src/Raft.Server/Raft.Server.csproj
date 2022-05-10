@@ -7,4 +7,8 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\Raft.Processor\Raft.Processor.csproj" />
+  </ItemGroup>
+
 </Project>

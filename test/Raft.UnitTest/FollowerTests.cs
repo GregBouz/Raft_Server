@@ -1,5 +1,5 @@
 ﻿using FluentAssertions;
-using Raft.Node;
+using Raft.Processor;
 using System.Collections.Generic;
 using System.Threading;
 using Xunit;

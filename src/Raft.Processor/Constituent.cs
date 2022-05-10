@@ -1,15 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Raft.Node
+﻿namespace Raft.Processor
 {
     public class Constituent
     {
         public string Address { get; set; }
 
-        public LogEntry NextIndex { get; set; }
+        public int NextIndex { get; set; }
     }
 }

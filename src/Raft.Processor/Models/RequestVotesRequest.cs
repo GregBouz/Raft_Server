@@ -1,4 +1,4 @@
-﻿namespace Raft.Node
+﻿namespace Raft.Processor
 {
     public class RequestVotesRequest
     {

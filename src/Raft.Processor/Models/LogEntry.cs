@@ -1,4 +1,4 @@
-﻿namespace Raft.Node
+﻿namespace Raft.Processor
 {
     /// <summary>
     /// Represents an entry in the replicated log.

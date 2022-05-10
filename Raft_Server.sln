@@ -15,13 +15,12 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 	ProjectSection(SolutionItems) = preProject
 		.gitattributes = .gitattributes
 		.gitignore = .gitignore
-		docker-compose.yml = docker-compose.yml
 		README.md = README.md
 	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Raft.Server", "src\Raft.Server\Raft.Server.csproj", "{DDBBB6E7-CCDD-41D9-ACB0-5044C14AFDC3}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raft.Client", "src\Raft.Client\Raft.Client.csproj", "{705C88E2-4564-429B-B494-FC54D41EF23E}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Raft.Client", "src\Raft.Client\Raft.Client.csproj", "{705C88E2-4564-429B-B494-FC54D41EF23E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

@@ -1,9 +1,18 @@
 ﻿// See https://aka.ms/new-console-template for more information
+using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
 
 Socket _clientSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+
+using (var serverNode1 = new Process())
+{
+    serverNode1.StartInfo.FileName = @"..\..\..\..\Raft.Server\bin\Debug\net6.0\Raft.Server.exe";
+    serverNode1.StartInfo.UseShellExecute = true;
+    serverNode1.StartInfo.Arguments = "8000";
+    serverNode1.Start();
+}
 
 ConnectToServer();
 var exit = false;

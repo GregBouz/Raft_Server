@@ -1,4 +1,4 @@
-﻿namespace Raft.Node
+﻿namespace Raft.Processor
 {
     /// <summary>
     /// An implementation of a sequential log storage that starts with the first entry having an index of 1

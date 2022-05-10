@@ -1,7 +1,4 @@
-﻿using System.Net;
-using System.Net.Sockets;
-
-namespace Raft.Node
+﻿namespace Raft.Processor
 {
     // Delegates
     public delegate void SendVoteRequest(string sender, string receiverAddress, int term, int lastLogTerm, int lastLogIndex);
@@ -11,12 +8,12 @@ namespace Raft.Node
     /// TODO:
     /// Add functions for handling recieved events (heartbeat, voterequest, appendMessage)
     /// </summary>
-    public class NodeProcessor
+    public class NodeProcessor : INodeProcessor
     { 
         private NodeConfiguration _nodeConfiguration;
 
         private Timer _heartbeatTimer;
-        private int _heartbeatTimeoutInMilliSeconds = new Random().Next(150, 300);
+        private int _heartbeatTimeoutInMilliSeconds = new Random().Next(1500, 3000);
         
         private MessageLog _messageLog;
 
@@ -28,14 +25,14 @@ namespace Raft.Node
         public Role Role { get; private set; }
         public int CurrentTerm { get; private set; }
         public int VotesReceived { get; private set; }
-        public string ServerAddress { get; private set; }
+        public string ServerId { get; private set; }
 
         /// <summary>
         /// Initialize the node
         /// </summary>
-        public NodeProcessor(string serverAddress, NodeConfiguration nodeConfiguration, TestingPresets testingPresets = null)
+        public NodeProcessor(string serverId, NodeConfiguration nodeConfiguration, TestingPresets testingPresets = null)
         {
-            ServerAddress = serverAddress;
+            ServerId = serverId;
             CurrentTerm = testingPresets?.CurrentTerm != null ? testingPresets.CurrentTerm : 0;
             VotesReceived = 0;
 
@@ -204,12 +201,11 @@ namespace Raft.Node
 
         private void StartElection()
         {
-            Console.WriteLine("Starting Election");
             CurrentTerm++;
             VotesReceived = 1;
             foreach (Constituent constituent in _nodeConfiguration.Constituents.Values)
             {
-                OnVoteRequest.Invoke(ServerAddress, constituent.Address, CurrentTerm, _messageLog.LastLogTerm(), _messageLog.LastLogIndex());
+                OnVoteRequest.Invoke(ServerId, constituent.Address, CurrentTerm, _messageLog.LastLogTerm(), _messageLog.LastLogIndex());
             }
         }
 
@@ -222,7 +218,7 @@ namespace Raft.Node
                 {
                     // TODO: send log entries to constituents last log index
                 }
-                OnAppendEntries.Invoke(ServerAddress, constituent.Address, CurrentTerm, -1, logEntriesToSend, _messageLog.LastLogTerm(), _messageLog.LastLogTerm());
+                OnAppendEntries.Invoke(ServerId, constituent.Address, CurrentTerm, -1, logEntriesToSend, _messageLog.LastLogTerm(), _messageLog.LastLogTerm());
             }
         }
 

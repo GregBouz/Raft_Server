@@ -24,6 +24,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Raft.Node\Raft.Processor.csproj" />
+    <ProjectReference Include="..\..\src\Raft.Processor\Raft.Processor.csproj" />
   </ItemGroup>
 
 </Project>
