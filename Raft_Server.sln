@@ -3,9 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.1.32120.378
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Raft_Server", "src\Raft_Server\Raft_Server.csproj", "{9FA14F30-3694-461F-AF83-BBA1F8EC2713}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Raft.Node", "src\Raft.Node\Raft.Node.csproj", "{36FCED33-6F96-4282-AE3A-206689F5627F}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Raft.Processor", "src\Raft.Processor\Raft.Processor.csproj", "{36FCED33-6F96-4282-AE3A-206689F5627F}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{9959FC76-DF95-484B-8A93-226A668C9693}"
 EndProject
@@ -17,8 +15,13 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 	ProjectSection(SolutionItems) = preProject
 		.gitattributes = .gitattributes
 		.gitignore = .gitignore
+		docker-compose.yml = docker-compose.yml
 		README.md = README.md
 	EndProjectSection
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Raft.Server", "src\Raft.Server\Raft.Server.csproj", "{DDBBB6E7-CCDD-41D9-ACB0-5044C14AFDC3}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Raft.Client", "src\Raft.Client\Raft.Client.csproj", "{705C88E2-4564-429B-B494-FC54D41EF23E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -26,10 +29,6 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{9FA14F30-3694-461F-AF83-BBA1F8EC2713}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{9FA14F30-3694-461F-AF83-BBA1F8EC2713}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{9FA14F30-3694-461F-AF83-BBA1F8EC2713}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{9FA14F30-3694-461F-AF83-BBA1F8EC2713}.Release|Any CPU.Build.0 = Release|Any CPU
 		{36FCED33-6F96-4282-AE3A-206689F5627F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{36FCED33-6F96-4282-AE3A-206689F5627F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{36FCED33-6F96-4282-AE3A-206689F5627F}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -38,12 +37,19 @@ Global
 		{8A822E85-D169-4EC3-BBDF-83EF02306041}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8A822E85-D169-4EC3-BBDF-83EF02306041}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8A822E85-D169-4EC3-BBDF-83EF02306041}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DDBBB6E7-CCDD-41D9-ACB0-5044C14AFDC3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DDBBB6E7-CCDD-41D9-ACB0-5044C14AFDC3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DDBBB6E7-CCDD-41D9-ACB0-5044C14AFDC3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DDBBB6E7-CCDD-41D9-ACB0-5044C14AFDC3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{705C88E2-4564-429B-B494-FC54D41EF23E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{705C88E2-4564-429B-B494-FC54D41EF23E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{705C88E2-4564-429B-B494-FC54D41EF23E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{705C88E2-4564-429B-B494-FC54D41EF23E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
-		{9FA14F30-3694-461F-AF83-BBA1F8EC2713} = {9959FC76-DF95-484B-8A93-226A668C9693}
 		{36FCED33-6F96-4282-AE3A-206689F5627F} = {9959FC76-DF95-484B-8A93-226A668C9693}
 		{8A822E85-D169-4EC3-BBDF-83EF02306041} = {903EAAB4-BF2E-48F5-8663-8EE62F25DFFA}
 	EndGlobalSection

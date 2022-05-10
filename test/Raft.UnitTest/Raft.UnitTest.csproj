@@ -23,7 +23,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Raft.Node\Raft.Node.csproj" />
+    <ProjectReference Include="..\..\src\Raft.Node\Raft.Processor.csproj" />
   </ItemGroup>
 
 </Project>
